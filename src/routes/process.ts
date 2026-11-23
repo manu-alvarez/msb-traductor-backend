@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import OpenAI from 'openai';
+import { validateProcessInput, type SummaryLevel } from '../request-validation.js';
 
 const router = Router();
 
@@ -8,30 +9,13 @@ const openai = new OpenAI({
   baseURL: 'https://api.groq.com/openai/v1',
 });
 
-type Modo = 'traducir_estandar' | 'traducir' | 'traducir_profesional' | 'traducir_coloquial' | 'resumir' | 'traducir_resumir';
-type Nivel = 'breve' | 'normal' | 'detallado';
-
 router.post('/process', async (req, res) => {
+  const result = validateProcessInput(req.body);
+  if (!result.ok) return res.status(400).json({ error: result.error });
+  const { texto, origen, destino, modo, nivelResumen } = result.value;
+
   try {
-    const {
-      texto,
-      origen = 'auto',
-      destino = 'es',
-      modo = 'traducir_resumir',
-      nivelResumen = 'normal',
-    }: {
-      texto: string;
-      origen?: string;
-      destino?: string;
-      modo?: Modo;
-      nivelResumen?: Nivel;
-    } = req.body;
-
-    if (!texto || !texto.trim()) {
-      return res.status(400).json({ error: 'Texto vacío' });
-    }
-
-    const detalleMap: Record<Nivel, string> = {
+    const detalleMap: Record<SummaryLevel, string> = {
       breve: 'muy breve (1-3 frases)',
       normal: 'de longitud media (3-6 frases)',
       detallado: 'detallado pero conciso (varios párrafos breves)',
@@ -94,11 +78,10 @@ Instrucción específica: ${systemPrompt}
       traduccion: parsed.traduccion ?? '',
       resumen: parsed.resumen ?? '',
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(err);
     return res.status(500).json({
       error: 'Error procesando el texto',
-      details: err?.message,
     });
   }
 });
