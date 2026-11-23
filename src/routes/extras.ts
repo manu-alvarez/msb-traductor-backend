@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import OpenAI from 'openai';
+import { validateExtrasInput } from '../request-validation.js';
 
 const router = Router();
 
@@ -16,13 +17,11 @@ const prompts: Record<string, string> = {
 };
 
 router.post('/extras', async (req, res) => {
+  const result = validateExtrasInput(req.body);
+  if (!result.ok) return res.status(400).json({ error: result.error });
+  const { texto, herramienta } = result.value;
+
   try {
-    const { texto, herramienta } = req.body;
-
-    if (!texto || !texto.trim()) {
-      return res.status(400).json({ error: 'Texto vacío' });
-    }
-
     const system = prompts[herramienta];
     if (!system) {
       return res.status(400).json({ error: 'Herramienta no válida' });
@@ -45,11 +44,10 @@ router.post('/extras', async (req, res) => {
     return res.json({
       resultado: content.trim(),
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error(err);
     return res.status(500).json({
       error: 'Error procesando la herramienta extra',
-      details: err?.message,
     });
   }
 });
