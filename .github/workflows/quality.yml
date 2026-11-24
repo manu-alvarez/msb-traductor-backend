@@ -2,7 +2,7 @@ name: Translator API quality
 
 on:
   push:
-    branches: [fix/validate-api-inputs-20261123]
+    branches: [main]
   pull_request:
     branches: [main]
 
